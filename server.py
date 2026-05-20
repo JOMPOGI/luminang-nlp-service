@@ -6,6 +6,7 @@ import time
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict, Any
+import difflib
 from huggingface_hub import InferenceClient
 
 # Import controlled dataset helpers
@@ -183,9 +184,13 @@ async def evaluate(
     best_entry = None
 
     for (entry, lang, phrase), sim_score in zip(phrase_targets, scores):
-        # Clip similarity score to [0, 1]
         sim_score = max(0.0, min(1.0, sim_score))
         
+        # Anti-Hallucination Filter: Penalize if lexical overlap is extremely low
+        lexical_score = difflib.SequenceMatcher(None, transcript_clean, clean_text(phrase)).ratio()
+        if lexical_score < 0.35:
+            sim_score = max(0.0, sim_score - 0.15)
+            
         # If this is our expected phrase, record the score
         if clean_text(phrase) == expected_clean:
             score = sim_score
@@ -260,6 +265,11 @@ async def find_best_match(
     for (entry, lang, phrase), sim_score in zip(all_targets, scores):
         sim_score = max(0.0, min(1.0, sim_score))
         
+        # Anti-Hallucination Filter: Penalize if lexical overlap is extremely low
+        lexical_score = difflib.SequenceMatcher(None, transcript_clean, clean_text(phrase)).ratio()
+        if lexical_score < 0.35:
+            sim_score = max(0.0, sim_score - 0.15)
+            
         # If it is part of the regional targets
         if lang != "english" or (entry, lang, phrase) in regional_targets:
             if sim_score > max_score:
@@ -323,6 +333,11 @@ async def find_all_matches(
     for (entry, lang, phrase), sim_score in zip(regional_targets, scores):
         sim_score = max(0.0, min(1.0, sim_score))
         
+        # Anti-Hallucination Filter: Penalize if lexical overlap is extremely low
+        lexical_score = difflib.SequenceMatcher(None, transcript_clean, clean_text(phrase)).ratio()
+        if lexical_score < 0.35:
+            sim_score = max(0.0, sim_score - 0.15)
+            
         if sim_score >= 0.80:
             matches.append({
                 "entry": entry,
