@@ -1,17 +1,16 @@
 import os
 import tempfile
-import numpy as np
-import torch
+import requests
 import uvicorn
+import time
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
 # Import controlled dataset helpers
 from dataset import dataset
 
-app = FastAPI(title="Luminang Semantic NLP Backend", version="1.0.0")
+app = FastAPI(title="Luminang Cloud-API NLP Backend", version="2.0.0")
 
 # Enable CORS for Unity web/local requests
 app.add_middleware(
@@ -22,118 +21,131 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global variables for models and precomputed embeddings
-model = None
-whisper_model = None
-phrase_embeddings = {}  # Cache: (lang, phrase) -> embedding
-
-# Setup CPU/GPU device
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-# Using multilingual-e5-small as it is extremely lightweight, fast on CPU, and high quality
+# Read API keys from Environment Variables
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+HF_API_TOKEN = os.environ.get("HF_API_TOKEN", "")
 MODEL_NAME = "intfloat/multilingual-e5-small"
-WHISPER_MODEL_NAME = "base"  # Multilingual base model is fast and accurate
-
-def clean_text(text: str) -> str:
-    if not text:
-        return ""
-    # Strip punctuation and lowercase
-    cleaned = text.lower()
-    cleaned = re_sub_punc.sub(" ", cleaned)
-    # Phonetic normalize if needed (kept minimal to avoid changing semantics)
-    cleaned = re_sub_space.sub(" ", cleaned).strip()
-    return cleaned
 
 # Compiled Regex for cleaning text
 import re
 re_sub_punc = re.compile(r'[.,?!:;"\'()\-_\/]')
 re_sub_space = re.compile(r'\s+')
 
+def clean_text(text: str) -> str:
+    if not text:
+        return ""
+    cleaned = text.lower()
+    cleaned = re_sub_punc.sub(" ", cleaned)
+    cleaned = re_sub_space.sub(" ", cleaned).strip()
+    return cleaned
+
 @app.on_event("startup")
 def startup_event():
-    global model, whisper_model
-    import whisper
-    from sentence_transformers import SentenceTransformer
-    
-    print(f"Loading Sentence Transformer model '{MODEL_NAME}' on {DEVICE}...")
-    model = SentenceTransformer(MODEL_NAME, device=DEVICE)
-    
-    print(f"Loading Whisper model '{WHISPER_MODEL_NAME}' on {DEVICE}...")
-    whisper_model = whisper.load_model(WHISPER_MODEL_NAME, device=DEVICE)
-    
-    print("Pre-encoding controlled dataset target phrases...")
-    precompute_dataset_embeddings()
-    print("Startup complete! Server is ready.")
-
-def precompute_dataset_embeddings():
-    global phrase_embeddings
-    phrase_embeddings.clear()
-    
-    unique_phrases = set()
-    for entry in dataset.phrases:
-        for lang in ["english", "ilokano", "cebuano"]:
-            phrase = entry.get(lang, "")
-            if phrase and phrase != "___":
-                unique_phrases.add(phrase)
-                
-    if not unique_phrases:
-        return
+    print("Checking API Keys...")
+    if not GROQ_API_KEY:
+        print("WARNING: GROQ_API_KEY environment variable is not set!")
+    else:
+        print("GROQ_API_KEY is configured.")
         
-    phrases_list = list(unique_phrases)
-    # Multilingual-e5 expects "query: " or "passage: " prefix depending on task
-    # For semantic similarity, prefixing with "query: " is recommended for retrieval-like tasks
-    prefixed_phrases = [f"query: {p}" for p in phrases_list]
-    
-    embeddings = model.encode(prefixed_phrases, show_progress_bar=False, convert_to_numpy=True)
-    
-    for phrase, embedding in zip(phrases_list, embeddings):
-        # Normalize the embedding to unit length for easy cosine similarity (dot product)
-        norm = np.linalg.norm(embedding)
-        if norm > 0:
-            embedding = embedding / norm
-        phrase_embeddings[phrase] = embedding
-
-def get_cosine_similarity(text1: str, text2: str) -> float:
-    # Clean inputs
-    t1 = clean_text(text1)
-    t2 = clean_text(text2)
-    
-    if not t1 or not t2:
-        return 0.0
+    if not HF_API_TOKEN:
+        print("WARNING: HF_API_TOKEN environment variable is not set!")
+    else:
+        print("HF_API_TOKEN is configured.")
         
-    # Check if we have precomputed embedding for text2 (target phrase)
-    emb2 = phrase_embeddings.get(text2)
-    if emb2 is None:
-        emb2_raw = model.encode(f"query: {t2}", convert_to_numpy=True)
-        norm = np.linalg.norm(emb2_raw)
-        emb2 = emb2_raw / norm if norm > 0 else emb2_raw
-        
-    # Check if we have precomputed embedding for text1 (input phrase)
-    emb1 = phrase_embeddings.get(text1)
-    if emb1 is None:
-        emb1_raw = model.encode(f"query: {t1}", convert_to_numpy=True)
-        norm = np.linalg.norm(emb1_raw)
-        emb1 = emb1_raw / norm if norm > 0 else emb1_raw
-        
-    # Dot product of normalized vectors is the cosine similarity
-    similarity = float(np.dot(emb1, emb2))
-    return similarity
+    print(f"Successfully loaded {len(dataset.phrases)} phrases from dataset.")
+    print("Startup complete! Server is running in Serverless API mode.")
 
 def transcribe_audio_file(audio_bytes: bytes) -> str:
-    # Save audio bytes to a temp file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+    if not GROQ_API_KEY:
+        raise HTTPException(
+            status_code=500, 
+            detail="GROQ_API_KEY environment variable is missing on the server. Please set it to enable Whisper STT."
+        )
+        
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}"
+    }
+    
+    # Write bytes to temporary file for upload
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
         temp_file.write(audio_bytes)
-        temp_path = temp_file.name
-
+        temp_file_path = temp_file.name
+        
     try:
-        # Transcribe using Whisper
-        # We specify beam_size=5 for higher quality, and try to assist with language if possible
-        result = whisper_model.transcribe(temp_path, temperature=0.0)
-        transcript = result.get("text", "").strip()
-        return transcript
+        with open(temp_file_path, "rb") as f:
+            files = {
+                "file": ("audio.wav", f, "audio/wav")
+            }
+            data = {
+                "model": "whisper-large-v3",
+                "response_format": "json"
+            }
+            response = requests.post(url, headers=headers, files=files, data=data)
+            
+        if response.status_code != 200:
+            print(f"Groq API Error: {response.status_code} | {response.text}")
+            raise HTTPException(status_code=502, detail="Failed to transcribe audio via Groq API.")
+            
+        result = response.json()
+        return result.get("text", "").strip()
     finally:
-        # Clean up temp file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
+def get_similarities_batch(source_text: str, target_texts: List[str]) -> List[float]:
+    if not HF_API_TOKEN:
+        raise HTTPException(
+            status_code=500, 
+            detail="HF_API_TOKEN environment variable is missing on the server. Please set it to enable NLP evaluation."
+        )
+        
+    s_clean = clean_text(source_text)
+    targets_clean = [clean_text(t) for t in target_texts]
+    
+    if not s_clean or not targets_clean:
+        return [0.0] * len(target_texts)
+        
+    url = f"https://api-inference.huggingface.co/models/{MODEL_NAME}"
+    headers = {
+        "Authorization": f"Bearer {HF_API_TOKEN}"
+    }
+    
+    payload = {
+        "inputs": {
+            "source_sentence": f"query: {s_clean}",
+            "sentences": [f"query: {t}" for t in targets_clean]
+        }
+    }
+    
+    max_retries = 5
+    for attempt in range(max_retries):
+        response = requests.post(url, headers=headers, json=payload)
+        
+        # Check if model is loading dynamically on Hugging Face serverless tier
+        if response.status_code == 503 or (response.status_code == 200 and "currently loading" in response.text):
+            try:
+                res_data = response.json()
+                est_time = res_data.get("estimated_time", 5)
+                wait_time = min(est_time, 5)
+            except Exception:
+                wait_time = 5
+            print(f"Hugging Face Model is loading. Waiting {wait_time}s (Attempt {attempt+1}/{max_retries})...")
+            time.sleep(wait_time)
+            continue
+            
+        if response.status_code == 200:
+            try:
+                res_data = response.json()
+                if isinstance(res_data, list):
+                    return [float(score) for score in res_data]
+            except Exception as e:
+                print(f"Failed to parse Hugging Face response: {e}")
+                
+        print(f"Hugging Face API Error: {response.status_code} | {response.text}")
+        raise HTTPException(status_code=502, detail="Failed to calculate semantic similarity via Hugging Face API.")
+        
+    raise HTTPException(status_code=504, detail="Hugging Face model load timeout.")
 
 @app.post("/evaluate")
 async def evaluate(
@@ -160,7 +172,6 @@ async def evaluate(
     expected_clean = clean_text(expected_phrase)
     transcript_clean = clean_text(transcript)
 
-
     # Find the expected entry in the dataset
     expected_entry = None
     for entry in dataset.phrases:
@@ -181,25 +192,36 @@ async def evaluate(
             "result": "try_again"
         }
 
-    # 3. Compute cosine similarity between embeddings
-    score = get_cosine_similarity(transcript_clean, expected_clean)
-    score = max(0.0, min(1.0, score))
-
-    # Cross-reference: Find the absolute best matching phrase in the dataset for player response
-    best_entry = None
-    best_score = -1.0
+    # Cross-reference check: We compile every valid phrase in the dataset
+    phrase_targets = []  # List of tuples: (entry, lang, phrase)
     for entry in dataset.phrases:
         for lang in ["english", "ilokano", "cebuano"]:
             phrase = entry.get(lang)
             if phrase and phrase != "___":
-                phrase_clean = clean_text(phrase)
-                sim = get_cosine_similarity(transcript_clean, phrase_clean)
-                if sim > best_score:
-                    best_score = sim
-                    best_entry = entry
+                phrase_targets.append((entry, lang, phrase))
+
+    # Send a single batch request to Hugging Face API
+    target_phrases = [item[2] for item in phrase_targets]
+    scores = get_similarities_batch(transcript_clean, target_phrases)
+
+    # Find the expected score and the overall best matching phrase
+    score = 0.0
+    best_score = -1.0
+    best_entry = None
+
+    for (entry, lang, phrase), sim_score in zip(phrase_targets, scores):
+        # Clip similarity score to [0, 1]
+        sim_score = max(0.0, min(1.0, sim_score))
+        
+        # If this is our expected phrase, record the score
+        if clean_text(phrase) == expected_clean:
+            score = sim_score
+            
+        if sim_score > best_score:
+            best_score = sim_score
+            best_entry = entry
 
     # 4. Apply threshold scoring
-    # If score is >= 0.80 and player's response matches expected better or comparably to any other phrase
     result = "try_again"
     if score >= 0.80:
         if best_entry == expected_entry or (best_score - score < 0.05):
@@ -235,46 +257,53 @@ async def find_best_match(
 
     transcript_clean = clean_text(transcript)
     
-
-    # Get valid target phrases for the active region
-    targets = dataset.get_all_targets(region)
-    if not targets:
-        return {
-            "transcript": transcript,
-            "best_entry": None,
-            "language": "",
-            "score": 0.0,
-            "is_english": False
-        }
-
-    # Find closest match using semantic embeddings
+    # Get regional targets
+    regional_targets = []
+    for entry, lang, phrase in dataset.get_all_targets(region):
+        if phrase and phrase != "___":
+            regional_targets.append((entry, lang, phrase))
+            
+    # Get English targets
+    english_targets = []
+    for entry in dataset.phrases:
+        phrase = entry.get("english")
+        if phrase:
+            english_targets.append((entry, "english", phrase))
+            
+    # Combine all targets to do a single batch call to Hugging Face
+    all_targets = regional_targets + english_targets
+    target_phrases = [item[2] for item in all_targets]
+    
+    scores = get_similarities_batch(transcript_clean, target_phrases)
+    
+    # Determine best regional match
     best_entry = None
     best_lang = ""
     max_score = -1.0
-
-    for entry, lang, phrase in targets:
-        if not phrase or phrase == "___":
-            continue
-        score = get_cosine_similarity(transcript_clean, phrase)
-        if score > max_score:
-            max_score = score
-            best_entry = entry
-            best_lang = lang
-
-    # Check English ONLY to detect if they are speaking English instead of regional
+    
+    # Determine best English match
     best_english_score = 0.0
-    english_targets = [(e, "english", e.get("english")) for e in dataset.phrases]
-    for entry, lang, phrase in english_targets:
-        if phrase:
-            score = get_cosine_similarity(transcript_clean, phrase)
-            if score > best_english_score:
-                best_english_score = score
-
-    # If English is a much better match than regional, flag it (like the original C# code)
+    
+    for (entry, lang, phrase), sim_score in zip(all_targets, scores):
+        sim_score = max(0.0, min(1.0, sim_score))
+        
+        # If it is part of the regional targets
+        if lang != "english" or (entry, lang, phrase) in regional_targets:
+            if sim_score > max_score:
+                max_score = sim_score
+                best_entry = entry
+                best_lang = lang
+                
+        # If it is part of the English targets
+        if lang == "english":
+            if sim_score > best_english_score:
+                best_english_score = sim_score
+                
+    # If English is a much better match than regional, flag it
     matched_english = False
     if best_english_score > 0.85 and best_english_score > (max_score + 0.15):
         matched_english = True
-
+        
     return {
         "transcript": transcript,
         "best_entry": best_entry,
@@ -303,24 +332,30 @@ async def find_all_matches(
 
     transcript_clean = clean_text(transcript)
 
-    targets = dataset.get_all_targets(region)
+    regional_targets = []
+    for entry, lang, phrase in dataset.get_all_targets(region):
+        if phrase and phrase != "___":
+            regional_targets.append((entry, lang, phrase))
+            
+    if not regional_targets:
+        return {
+            "transcript": transcript,
+            "matches": []
+        }
+        
+    target_phrases = [item[2] for item in regional_targets]
+    scores = get_similarities_batch(transcript_clean, target_phrases)
+    
     matches = []
-
-    for entry, lang, phrase in targets:
-        if not phrase or phrase == "___":
-            continue
-        score = get_cosine_similarity(transcript_clean, phrase)
-        # 65% is the original threshold in PhraseEvaluator.cs
-        if score >= 0.65:
-            # We return matches in the structure expected by Unity
+    for (entry, lang, phrase), sim_score in zip(regional_targets, scores):
+        sim_score = max(0.0, min(1.0, sim_score))
+        if sim_score >= 0.65:
             matches.append({
                 "entry": entry,
                 "language": lang,
-                "score": round(score * 100.0, 2)  # C# expects 0-100 scale
+                "score": round(sim_score * 100.0, 2)  # C# expects 0-100 scale
             })
-
-    # Sort matches by position of phrase in transcription, or score descending
-    # Let's sort by score descending for best results
+            
     matches = sorted(matches, key=lambda x: x["score"], reverse=True)
 
     return {
@@ -339,4 +374,3 @@ async def transcribe(audio: UploadFile = File(...)):
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
-
