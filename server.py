@@ -112,7 +112,7 @@ def get_similarities_batch(source_text: str, target_texts: List[str]) -> List[fl
         client = InferenceClient(token=HF_API_TOKEN)
         scores = client.sentence_similarity(
             sentence=f"query: {s_clean}",
-            other_sentences=[f"query: {t}" for t in targets_clean],
+            other_sentences=[f"passage: {t}" for t in targets_clean],
             model=MODEL_NAME
         )
         return [float(score) for score in scores]
