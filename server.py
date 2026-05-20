@@ -6,6 +6,7 @@ import time
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict, Any
+from huggingface_hub import InferenceClient
 
 # Import controlled dataset helpers
 from dataset import dataset
@@ -106,46 +107,18 @@ def get_similarities_batch(source_text: str, target_texts: List[str]) -> List[fl
     if not s_clean or not targets_clean:
         return [0.0] * len(target_texts)
         
-    url = f"https://api-inference.huggingface.co/models/{MODEL_NAME}"
-    headers = {
-        "Authorization": f"Bearer {HF_API_TOKEN}"
-    }
-    
-    payload = {
-        "inputs": {
-            "source_sentence": f"query: {s_clean}",
-            "sentences": [f"query: {t}" for t in targets_clean]
-        }
-    }
-    
-    max_retries = 5
-    for attempt in range(max_retries):
-        response = requests.post(url, headers=headers, json=payload)
-        
-        # Check if model is loading dynamically on Hugging Face serverless tier
-        if response.status_code == 503 or (response.status_code == 200 and "currently loading" in response.text):
-            try:
-                res_data = response.json()
-                est_time = res_data.get("estimated_time", 5)
-                wait_time = min(est_time, 5)
-            except Exception:
-                wait_time = 5
-            print(f"Hugging Face Model is loading. Waiting {wait_time}s (Attempt {attempt+1}/{max_retries})...")
-            time.sleep(wait_time)
-            continue
-            
-        if response.status_code == 200:
-            try:
-                res_data = response.json()
-                if isinstance(res_data, list):
-                    return [float(score) for score in res_data]
-            except Exception as e:
-                print(f"Failed to parse Hugging Face response: {e}")
-                
-        print(f"Hugging Face API Error: {response.status_code} | {response.text}")
-        raise HTTPException(status_code=502, detail="Failed to calculate semantic similarity via Hugging Face API.")
-        
-    raise HTTPException(status_code=504, detail="Hugging Face model load timeout.")
+    try:
+        # Use Hugging Face SDK client (which handles task routing and automatic load retries under the hood)
+        client = InferenceClient(token=HF_API_TOKEN)
+        scores = client.sentence_similarity(
+            sentence=f"query: {s_clean}",
+            other_sentences=[f"query: {t}" for t in targets_clean],
+            model=MODEL_NAME
+        )
+        return [float(score) for score in scores]
+    except Exception as e:
+        print(f"Hugging Face API Error via SDK: {e}")
+        raise HTTPException(status_code=502, detail=f"Failed to calculate semantic similarity: {str(e)}")
 
 @app.post("/evaluate")
 async def evaluate(
