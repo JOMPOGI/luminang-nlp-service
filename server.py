@@ -319,27 +319,15 @@ async def find_all_matches(
     target_phrases = [item[2] for item in regional_targets]
     scores = get_similarities_batch(transcript_clean, target_phrases)
     
-    # 1. Find max regional (non-English) score in the targets
-    max_regional_score = 0.0
-    for (entry, lang, phrase), sim_score in zip(regional_targets, scores):
-        if lang != "english":
-            max_regional_score = max(max_regional_score, sim_score)
-
     matches = []
     for (entry, lang, phrase), sim_score in zip(regional_targets, scores):
         sim_score = max(0.0, min(1.0, sim_score))
         
-        # Apply a 15% penalty to English matches unless they are extremely dominant
-        final_score = sim_score
-        if lang == "english":
-            if sim_score <= max_regional_score + 0.15:
-                final_score = max(0.0, sim_score - 0.15)
-                
-        if final_score >= 0.80:
+        if sim_score >= 0.80:
             matches.append({
                 "entry": entry,
                 "language": lang,
-                "score": round(final_score * 100.0, 2)  # C# expects 0-100 scale
+                "score": round(sim_score * 100.0, 2)  # C# expects 0-100 scale
             })
             
     # Sort matches by score descending

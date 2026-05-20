@@ -39,14 +39,14 @@ class ControlledDataset:
             elif region_mode == "Cebuano":
                 targets.append((entry, "cebuano", entry.get("cebuano", "")))
             elif region_mode == "BossBattle":
-                # In Boss Battle, all languages are active
-                for lang in ["english", "ilokano", "cebuano"]:
+                # In Boss Battle, all regional languages are active
+                for lang in ["ilokano", "cebuano"]:
                     val = entry.get(lang, "")
                     if val and val != "___":
                         targets.append((entry, lang, val))
             else:
-                # Default, include all
-                for lang in ["english", "ilokano", "cebuano"]:
+                # Default, include regional
+                for lang in ["ilokano", "cebuano"]:
                     val = entry.get(lang, "")
                     if val and val != "___":
                         targets.append((entry, lang, val))
