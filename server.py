@@ -322,7 +322,7 @@ async def find_all_matches(
     matches = []
     for (entry, lang, phrase), sim_score in zip(regional_targets, scores):
         sim_score = max(0.0, min(1.0, sim_score))
-        if sim_score >= 0.65:
+        if sim_score >= 0.80:
             matches.append({
                 "entry": entry,
                 "language": lang,
