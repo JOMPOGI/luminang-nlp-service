@@ -1,0 +1,490 @@
+{
+  "phrases": [
+    {
+      "category": "Greetings",
+      "english": "good morning",
+      "ilokano": "naimbag a bigat",
+      "cebuano": "maayong buntag"
+    },
+    {
+      "category": "Greetings",
+      "english": "good afternoon",
+      "ilokano": "naimbag a malem",
+      "cebuano": "maayong hapon"
+    },
+    {
+      "category": "Greetings",
+      "english": "good evening",
+      "ilokano": "naimbag a rabii",
+      "cebuano": "maayong gabii"
+    },
+    {
+      "category": "Greetings",
+      "english": "hello",
+      "ilokano": "kumusta",
+      "cebuano": "kumusta"
+    },
+    {
+      "category": "Greetings",
+      "english": "how are you?",
+      "ilokano": "kumusta ka?",
+      "cebuano": "kumusta ka?"
+    },
+    {
+      "category": "Greetings",
+      "english": "I'm fine",
+      "ilokano": "nasayaat ak",
+      "cebuano": "maayo ra ko"
+    },
+    {
+      "category": "Greetings",
+      "english": "goodbye",
+      "ilokano": "Pakada (agpakada akon) daw",
+      "cebuano": "paalam"
+    },
+    {
+      "category": "Greetings",
+      "english": "good day",
+      "ilokano": "Naimbag nga aldaw",
+      "cebuano": "Maayong aldaw"
+    },
+    {
+      "category": "Gratitude",
+      "english": "thank you",
+      "ilokano": "agyamanak",
+      "cebuano": "salamat"
+    },
+    {
+      "category": "Gratitude",
+      "english": "thank you very much",
+      "ilokano": "agyamanak unay",
+      "cebuano": "daghang salamat"
+    },
+    {
+      "category": "Gratitude",
+      "english": "thank you for your help",
+      "ilokano": "agyamanak iti tulong mo",
+      "cebuano": "salamat sa imong tabang"
+    },
+    {
+      "category": "Gratitude",
+      "english": "I am sorry",
+      "ilokano": "pakawanen nak",
+      "cebuano": "pasayloa ko"
+    },
+    {
+      "category": "Gratitude",
+      "english": "excuse me",
+      "ilokano": "dispensaren nak",
+      "cebuano": "tabi"
+    },
+    {
+      "category": "Responses",
+      "english": "yes",
+      "ilokano": "wen",
+      "cebuano": "oo"
+    },
+    {
+      "category": "Responses",
+      "english": "no",
+      "ilokano": "saan",
+      "cebuano": "dili"
+    },
+    {
+      "category": "Responses",
+      "english": "okay",
+      "ilokano": "okay",
+      "cebuano": "sige"
+    },
+    {
+      "category": "Responses",
+      "english": "I understand",
+      "ilokano": "maawatan ko",
+      "cebuano": "sabtan nako"
+    },
+    {
+      "category": "Responses",
+      "english": "I don't understand",
+      "ilokano": "diak maawatan",
+      "cebuano": "dili ko kasabot"
+    },
+    {
+      "category": "Identity",
+      "english": "what is your name",
+      "ilokano": "ania ti nagan mo",
+      "cebuano": "unsay imong ngalan"
+    },
+    {
+      "category": "Identity",
+      "english": "my name is ___",
+      "ilokano": "ti nagan ko ket ___",
+      "cebuano": "ako si ___"
+    },
+    {
+      "category": "Identity",
+      "english": "where are you from",
+      "ilokano": "taga sadino ka",
+      "cebuano": "taga asa ka"
+    },
+    {
+      "category": "Identity",
+      "english": "I am from ___",
+      "ilokano": "taga ___ ak",
+      "cebuano": "taga ___ ko"
+    },
+    {
+      "category": "Requests",
+      "english": "help me",
+      "ilokano": "tulunganak",
+      "cebuano": "tabangi ko"
+    },
+    {
+      "category": "Requests",
+      "english": "can you help me",
+      "ilokano": "mabalin kadi a tulunganak",
+      "cebuano": "pwede nimo ko tabangan"
+    },
+    {
+      "category": "Requests",
+      "english": "please wait",
+      "ilokano": "urayennak",
+      "cebuano": "hulata ko"
+    },
+    {
+      "category": "Requests",
+      "english": "give me ___",
+      "ilokano": "ikanmo man ___",
+      "cebuano": "hatagi ko ___"
+    },
+    {
+      "category": "Requests",
+      "english": "can I ask",
+      "ilokano": "mabalin kadi agsaludsod",
+      "cebuano": "pwede ko mangutana"
+    },
+    {
+      "category": "Directions",
+      "english": "go straight",
+      "ilokano": "agdiretso",
+      "cebuano": "padayon"
+    },
+    {
+      "category": "Directions",
+      "english": "turn left",
+      "ilokano": "agliko iti kannigid",
+      "cebuano": "liko sa wala"
+    },
+    {
+      "category": "Directions",
+      "english": "turn right",
+      "ilokano": "agliko iti kannawan",
+      "cebuano": "liko sa tuo"
+    },
+    {
+      "category": "Directions",
+      "english": "go up",
+      "ilokano": "umuli iti ngato",
+      "cebuano": "saka pataas"
+    },
+    {
+      "category": "Directions",
+      "english": "go down",
+      "ilokano": "bumaba",
+      "cebuano": "naog"
+    },
+    {
+      "category": "Directions",
+      "english": "stop here",
+      "ilokano": "agsardeng ditoy",
+      "cebuano": "hunong diri"
+    },
+    {
+      "category": "Directions",
+      "english": "come here",
+      "ilokano": "umay ditoy",
+      "cebuano": "ari diri"
+    },
+    {
+      "category": "Directions",
+      "english": "go there",
+      "ilokano": "mapan idiay",
+      "cebuano": "adto didto"
+    },
+    {
+      "category": "Directions",
+      "english": "follow me",
+      "ilokano": "surotennak",
+      "cebuano": "sunda ko"
+    },
+    {
+      "category": "Directions",
+      "english": "wait here",
+      "ilokano": "uray ditoy",
+      "cebuano": "hulata diri"
+    },
+    {
+      "category": "Count",
+      "english": "one",
+      "ilokano": "maysa",
+      "cebuano": "usa"
+    },
+    {
+      "category": "Count",
+      "english": "two",
+      "ilokano": "dua",
+      "cebuano": "duha"
+    },
+    {
+      "category": "Count",
+      "english": "three",
+      "ilokano": "tallo",
+      "cebuano": "tulo"
+    },
+    {
+      "category": "Count",
+      "english": "four",
+      "ilokano": "uppat",
+      "cebuano": "upat"
+    },
+    {
+      "category": "Count",
+      "english": "five",
+      "ilokano": "lima",
+      "cebuano": "lima"
+    },
+    {
+      "category": "Count",
+      "english": "six",
+      "ilokano": "innem",
+      "cebuano": "unom"
+    },
+    {
+      "category": "Count",
+      "english": "seven",
+      "ilokano": "pito",
+      "cebuano": "pito"
+    },
+    {
+      "category": "Count",
+      "english": "eight",
+      "ilokano": "walo",
+      "cebuano": "walo"
+    },
+    {
+      "category": "Count",
+      "english": "nine",
+      "ilokano": "siam",
+      "cebuano": "siyam"
+    },
+    {
+      "category": "Count",
+      "english": "ten",
+      "ilokano": "sangapulo",
+      "cebuano": "napulo"
+    },
+    {
+      "category": "Action Verbs",
+      "english": "eat",
+      "ilokano": "mangan",
+      "cebuano": "kaon"
+    },
+    {
+      "category": "Action Verbs",
+      "english": "drink",
+      "ilokano": "uminom",
+      "cebuano": "inom"
+    },
+    {
+      "category": "Action Verbs",
+      "english": "go",
+      "ilokano": "mapan",
+      "cebuano": "adto"
+    },
+    {
+      "category": "Action Verbs",
+      "english": "come",
+      "ilokano": "umay",
+      "cebuano": "ari"
+    },
+    {
+      "category": "Action Verbs",
+      "english": "sleep",
+      "ilokano": "maturog",
+      "cebuano": "katulog"
+    },
+    {
+      "category": "Action Verbs",
+      "english": "see",
+      "ilokano": "makita",
+      "cebuano": "makita"
+    },
+    {
+      "category": "Action Verbs",
+      "english": "hear",
+      "ilokano": "mangngeg",
+      "cebuano": "paminaw"
+    },
+    {
+      "category": "Action Verbs",
+      "english": "speak",
+      "ilokano": "agsao",
+      "cebuano": "sulti"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "am",
+      "ilokano": "ket / siak ti",
+      "cebuano": "mao / ako si"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "is",
+      "ilokano": "ket / isu ti",
+      "cebuano": "mao / maoy"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "are",
+      "ilokano": "ket / da",
+      "cebuano": "mao / maoy"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "was",
+      "ilokano": "ket idi / na",
+      "cebuano": "mao / nahimo"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "were",
+      "ilokano": "ket idi",
+      "cebuano": "mao"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "become",
+      "ilokano": "agbalin",
+      "cebuano": "mahimong"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "seem",
+      "ilokano": "kasla / kasla ket",
+      "cebuano": "murag / daw"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "remain",
+      "ilokano": "agtalinaed",
+      "cebuano": "magpabilin"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "stay",
+      "ilokano": "agtalinaed / agyan",
+      "cebuano": "magpabilin"
+    },
+    {
+      "category": "Linking Verbs",
+      "english": "feel",
+      "ilokano": "marikna",
+      "cebuano": "bati"
+    },
+    {
+      "category": "Pronouns",
+      "english": "I",
+      "ilokano": "siak",
+      "cebuano": "ako"
+    },
+    {
+      "category": "Pronouns",
+      "english": "you",
+      "ilokano": "sika",
+      "cebuano": "ikaw / ka"
+    },
+    {
+      "category": "Pronouns",
+      "english": "he",
+      "ilokano": "isuna",
+      "cebuano": "siya"
+    },
+    {
+      "category": "Pronouns",
+      "english": "she",
+      "ilokano": "isuna",
+      "cebuano": "siya"
+    },
+    {
+      "category": "Pronouns",
+      "english": "we",
+      "ilokano": "dakkami",
+      "cebuano": "kami / kita"
+    },
+    {
+      "category": "Pronouns",
+      "english": "they",
+      "ilokano": "isuda",
+      "cebuano": "sila"
+    },
+    {
+      "category": "Pronouns",
+      "english": "me",
+      "ilokano": "siak",
+      "cebuano": "ako"
+    },
+    {
+      "category": "Pronouns",
+      "english": "us",
+      "ilokano": "dakkami",
+      "cebuano": "kami"
+    },
+    {
+      "category": "Pronouns",
+      "english": "them",
+      "ilokano": "isuda",
+      "cebuano": "sila"
+    },
+    {
+      "category": "Interrogatives",
+      "english": "what",
+      "ilokano": "ania",
+      "cebuano": "unsa"
+    },
+    {
+      "category": "Interrogatives",
+      "english": "who",
+      "ilokano": "asino",
+      "cebuano": "kinsa"
+    },
+    {
+      "category": "Interrogatives",
+      "english": "where",
+      "ilokano": "sadino",
+      "cebuano": "asa"
+    },
+    {
+      "category": "Interrogatives",
+      "english": "when",
+      "ilokano": "kaano",
+      "cebuano": "kanus-a"
+    },
+    {
+      "category": "Interrogatives",
+      "english": "why",
+      "ilokano": "apay",
+      "cebuano": "ngano"
+    },
+    {
+      "category": "Interrogatives",
+      "english": "how",
+      "ilokano": "kasano",
+      "cebuano": "giunsa / unsaon"
+    },
+    {
+      "category": "Interrogatives",
+      "english": "how many",
+      "ilokano": "mano",
+      "cebuano": "pila"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-multipart
+numpy
+sentence-transformers
+openai-whisper
+torch --extra-index-url https://download.pytorch.org/whl/cpu
