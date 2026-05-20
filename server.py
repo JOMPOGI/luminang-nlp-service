@@ -27,11 +27,15 @@ model = None
 whisper_model = None
 phrase_embeddings = {}  # Cache: (lang, phrase) -> embedding
 
+# Optimize PyTorch CPU memory usage (essential for 512MB RAM environments like Render Free Tier)
+torch.set_num_threads(1)
+torch.set_num_interop_threads(1)
+
 # Setup CPU/GPU device
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # Using multilingual-e5-small as it is extremely lightweight, fast on CPU, and high quality
 MODEL_NAME = "intfloat/multilingual-e5-small"
-WHISPER_MODEL_NAME = "base"  # Multilingual base model is fast and accurate
+WHISPER_MODEL_NAME = "tiny"  # Tiny model is 75MB (half the RAM of base) and extremely fast/accurate for short phrases
 
 def clean_text(text: str) -> str:
     if not text:
@@ -53,6 +57,7 @@ def startup_event():
     global model, whisper_model
     import whisper
     from sentence_transformers import SentenceTransformer
+    import gc
     
     print(f"Loading Sentence Transformer model '{MODEL_NAME}' on {DEVICE}...")
     model = SentenceTransformer(MODEL_NAME, device=DEVICE)
@@ -62,6 +67,9 @@ def startup_event():
     
     print("Pre-encoding controlled dataset target phrases...")
     precompute_dataset_embeddings()
+    
+    # Run garbage collection to clean up loading artifacts from RAM
+    gc.collect()
     print("Startup complete! Server is ready.")
 
 def precompute_dataset_embeddings():
