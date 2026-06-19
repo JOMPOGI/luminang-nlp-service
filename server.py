@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict, Any
 import difflib
 from huggingface_hub import InferenceClient
+from phonetic import get_phonetic_similarity
+
 
 # Import controlled dataset helpers
 from dataset import dataset
@@ -185,18 +187,20 @@ async def evaluate(
 
     for (entry, lang, phrase), sim_score in zip(phrase_targets, scores):
         sim_score = max(0.0, min(1.0, sim_score))
+        phonetic_score = get_phonetic_similarity(transcript_clean, clean_text(phrase))
+        combined_score = 0.8 * sim_score + 0.2 * phonetic_score
         
         # Anti-Hallucination Filter: Penalize if lexical overlap is extremely low
         lexical_score = difflib.SequenceMatcher(None, transcript_clean, clean_text(phrase)).ratio()
         if lexical_score < 0.35:
-            sim_score = max(0.0, sim_score - 0.15)
+            combined_score = max(0.0, combined_score - 0.15)
             
         # If this is our expected phrase, record the score
         if clean_text(phrase) == expected_clean:
-            score = sim_score
+            score = combined_score
             
-        if sim_score > best_score:
-            best_score = sim_score
+        if combined_score > best_score:
+            best_score = combined_score
             best_entry = entry
 
     # 4. Apply threshold scoring
@@ -209,9 +213,13 @@ async def evaluate(
 
     print(f"Evaluation: score = {score:.4f}, result = {result}")
 
+    expected_phrase_clean = clean_text(expected_phrase)
+    final_phonetic = get_phonetic_similarity(transcript_clean, expected_phrase_clean)
+
     return {
         "transcript": transcript,
         "score": round(score, 4),
+        "phonetic_score": round(final_phonetic, 4),
         "result": result
     }
 
@@ -264,23 +272,25 @@ async def find_best_match(
     
     for (entry, lang, phrase), sim_score in zip(all_targets, scores):
         sim_score = max(0.0, min(1.0, sim_score))
+        phonetic_score = get_phonetic_similarity(transcript_clean, clean_text(phrase))
+        combined_score = 0.8 * sim_score + 0.2 * phonetic_score
         
         # Anti-Hallucination Filter: Penalize if lexical overlap is extremely low
         lexical_score = difflib.SequenceMatcher(None, transcript_clean, clean_text(phrase)).ratio()
         if lexical_score < 0.35:
-            sim_score = max(0.0, sim_score - 0.15)
+            combined_score = max(0.0, combined_score - 0.15)
             
         # If it is part of the regional targets
         if lang != "english" or (entry, lang, phrase) in regional_targets:
-            if sim_score > max_score:
-                max_score = sim_score
+            if combined_score > max_score:
+                max_score = combined_score
                 best_entry = entry
                 best_lang = lang
                 
         # If it is part of the English targets
         if lang == "english":
-            if sim_score > best_english_score:
-                best_english_score = sim_score
+            if combined_score > best_english_score:
+                best_english_score = combined_score
                 
     # If English is a much better match than regional, flag it
     matched_english = False
@@ -332,17 +342,19 @@ async def find_all_matches(
     matches = []
     for (entry, lang, phrase), sim_score in zip(regional_targets, scores):
         sim_score = max(0.0, min(1.0, sim_score))
+        phonetic_score = get_phonetic_similarity(transcript_clean, clean_text(phrase))
+        combined_score = 0.8 * sim_score + 0.2 * phonetic_score
         
         # Anti-Hallucination Filter: Penalize if lexical overlap is extremely low
         lexical_score = difflib.SequenceMatcher(None, transcript_clean, clean_text(phrase)).ratio()
         if lexical_score < 0.35:
-            sim_score = max(0.0, sim_score - 0.15)
+            combined_score = max(0.0, combined_score - 0.15)
             
-        if sim_score >= 0.80:
+        if combined_score >= 0.80:
             matches.append({
                 "entry": entry,
                 "language": lang,
-                "score": round(sim_score * 100.0, 2)  # C# expects 0-100 scale
+                "score": round(combined_score * 100.0, 2)  # C# expects 0-100 scale
             })
             
     # Sort matches by score descending
