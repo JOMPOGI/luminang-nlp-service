@@ -51,12 +51,11 @@ def startup_event():
 def is_valid_language(detected_lang: str, region: str) -> bool:
     """
     Returns True if the Whisper detected language aligns with the expected regional context.
-    Whisper often misclassifies Ilokano as Tagalog, Indonesian, or Malay due to lack of a dedicated Ilokano token.
     """
     if region == "English":
         return detected_lang == "english"
         
-    valid_regional_langs = {"cebuano", "tagalog", "filipino", "indonesian", "malay"}
+    valid_regional_langs = {"cebuano", "tagalog", "filipino"}
     return detected_lang in valid_regional_langs
 
 def transcribe_audio_file(audio_bytes: bytes, region: str = None) -> Dict[str, str]:
