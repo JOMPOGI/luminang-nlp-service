@@ -28,12 +28,15 @@ class ControlledDataset:
             print(f"Dataset JSON not found at {json_path}!")
 
 
-    def get_all_targets(self, region_mode):
+    def get_all_targets(self, region_mode, category=None):
         """
-        Returns all valid phrases for evaluation under a specific region mode.
+        Returns all valid phrases for evaluation under a specific region mode and optional category context.
         """
         targets = []
         for entry in self.phrases:
+            if category and entry.get("category") != category:
+                continue
+                
             if region_mode == "Ilokano":
                 targets.append((entry, "ilokano", entry.get("ilokano", "")))
             elif region_mode == "Cebuano":
@@ -42,13 +45,13 @@ class ControlledDataset:
                 # In Boss Battle, all regional languages are active
                 for lang in ["ilokano", "cebuano"]:
                     val = entry.get(lang, "")
-                    if val and val != "___":
+                    if val:
                         targets.append((entry, lang, val))
             else:
                 # Default, include regional
                 for lang in ["ilokano", "cebuano"]:
                     val = entry.get(lang, "")
-                    if val and val != "___":
+                    if val:
                         targets.append((entry, lang, val))
         return targets
 

@@ -115,10 +115,13 @@
       "cebuano": "unsay imong ngalan"
     },
     {
+      "id": "identity_my_name",
       "category": "Identity",
-      "english": "my name is ___",
-      "ilokano": "ti nagan ko ket ___",
-      "cebuano": "ako si ___"
+      "english": "my name is {name}",
+      "ilokano": "ti nagan ko ket {name}",
+      "cebuano": "ako si {name}",
+      "type": "template",
+      "slots": ["name"]
     },
     {
       "category": "Identity",
@@ -127,10 +130,13 @@
       "cebuano": "taga asa ka"
     },
     {
+      "id": "identity_from_location",
       "category": "Identity",
-      "english": "I am from ___",
-      "ilokano": "taga ___ ak",
-      "cebuano": "taga ___ ko"
+      "english": "I am from {location}",
+      "ilokano": "taga {location} ak",
+      "cebuano": "taga {location} ko",
+      "type": "template",
+      "slots": ["location"]
     },
     {
       "category": "Requests",
@@ -151,10 +157,13 @@
       "cebuano": "hulata ko"
     },
     {
+      "id": "requests_give_me",
       "category": "Requests",
-      "english": "give me ___",
-      "ilokano": "ikanmo man ___",
-      "cebuano": "hatagi ko ___"
+      "english": "give me {item}",
+      "ilokano": "ikanmo man {item}",
+      "cebuano": "hatagi ko {item}",
+      "type": "template",
+      "slots": ["item"]
     },
     {
       "category": "Requests",
