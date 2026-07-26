@@ -48,7 +48,18 @@ def startup_event():
     print(f"Successfully loaded {len(dataset.phrases)} phrases from dataset.")
     print("Startup complete! Server is running in Serverless API mode.")
 
-def transcribe_audio_file(audio_bytes: bytes, region: str = None) -> str:
+def is_valid_language(detected_lang: str, region: str) -> bool:
+    """
+    Returns True if the Whisper detected language aligns with the expected regional context.
+    Whisper often misclassifies Ilokano as Tagalog, Indonesian, or Malay due to lack of a dedicated Ilokano token.
+    """
+    if region == "English":
+        return detected_lang == "english"
+        
+    valid_regional_langs = {"cebuano", "tagalog", "filipino", "indonesian", "malay"}
+    return detected_lang in valid_regional_langs
+
+def transcribe_audio_file(audio_bytes: bytes, region: str = None) -> Dict[str, str]:
     if not GROQ_API_KEY:
         raise HTTPException(
             status_code=500, 
@@ -72,7 +83,7 @@ def transcribe_audio_file(audio_bytes: bytes, region: str = None) -> str:
             }
             data = {
                 "model": "whisper-large-v3",
-                "response_format": "json"
+                "response_format": "verbose_json"
             }
             if region:
                 # Add prompt hint for better ASR
@@ -84,7 +95,10 @@ def transcribe_audio_file(audio_bytes: bytes, region: str = None) -> str:
             raise HTTPException(status_code=502, detail="Failed to transcribe audio via Groq API.")
             
         result = response.json()
-        return result.get("text", "").strip()
+        return {
+            "text": result.get("text", "").strip(),
+            "language": result.get("language", "").lower()
+        }
     finally:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
@@ -128,9 +142,27 @@ async def evaluate(
     Supports either pre-transcribed text or direct audio upload.
     """
     transcript = ""
+    detected_lang = ""
     if audio:
         audio_bytes = await audio.read()
-        transcript = transcribe_audio_file(audio_bytes)
+        res = transcribe_audio_file(audio_bytes)
+        transcript = res["text"]
+        detected_lang = res["language"]
+        
+        if not is_valid_language(detected_lang, region):
+            print(f"Warning: Rejected audio because Whisper detected '{detected_lang}' (expected {region})")
+            return {
+                "transcript": transcript,
+                "score": 0.0,
+                "result": "try_again",
+                "exact_score": 0.0,
+                "lexical_score": 0.0,
+                "phonetic_score": 0.0,
+                "semantic_score": 0.0,
+                "template_score": 0.0,
+                "final_confidence": 0.0,
+                "code_switched": False
+            }
     elif transcribed_text:
         transcript = transcribed_text
     else:
@@ -247,9 +279,22 @@ async def find_best_match(
     Searches the controlled dataset for the closest matching phrase.
     """
     transcript = ""
+    detected_lang = ""
     if audio:
         audio_bytes = await audio.read()
-        transcript = transcribe_audio_file(audio_bytes)
+        res = transcribe_audio_file(audio_bytes)
+        transcript = res["text"]
+        detected_lang = res["language"]
+        
+        if not is_valid_language(detected_lang, region):
+            print(f"Warning: Rejected audio because Whisper detected '{detected_lang}' (expected {region})")
+            return {
+                "transcript": transcript,
+                "best_entry": None,
+                "language": detected_lang,
+                "score": 0.0,
+                "is_english": True
+            }
     elif transcribed_text:
         transcript = transcribed_text
     else:
@@ -329,9 +374,19 @@ async def find_all_matches(
     Searches the dataset for all matching phrases above a similarity threshold.
     """
     transcript = ""
+    detected_lang = ""
     if audio:
         audio_bytes = await audio.read()
-        transcript = transcribe_audio_file(audio_bytes)
+        res = transcribe_audio_file(audio_bytes)
+        transcript = res["text"]
+        detected_lang = res["language"]
+        
+        if not is_valid_language(detected_lang, region):
+            print(f"Warning: Rejected audio because Whisper detected '{detected_lang}' (expected {region})")
+            return {
+                "transcript": transcript,
+                "matches": []
+            }
     elif transcribed_text:
         transcript = transcribed_text
     else:
@@ -390,8 +445,8 @@ async def transcribe(audio: UploadFile = File(...)):
     Transcribes uploaded audio file and returns transcription.
     """
     audio_bytes = await audio.read()
-    transcript = transcribe_audio_file(audio_bytes)
-    return {"text": transcript}
+    res = transcribe_audio_file(audio_bytes)
+    return {"text": res["text"], "language": res["language"]}
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
