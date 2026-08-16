@@ -3,6 +3,7 @@ import tempfile
 import requests
 import uvicorn
 import time
+import json
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict, Any
@@ -446,6 +447,85 @@ async def transcribe(audio: UploadFile = File(...)):
     audio_bytes = await audio.read()
     res = transcribe_audio_file(audio_bytes)
     return {"text": res["text"], "language": res["language"]}
+
+@app.post("/parse_intent")
+async def parse_intent(
+    allowed_intents: str = Form(...),
+    context_prompt: str = Form(""),
+    transcribed_text: Optional[str] = Form(None),
+    audio: Optional[UploadFile] = File(None)
+):
+    """
+    Classifies the user's speech into an intent and extracts slots using an LLM.
+    """
+    transcript = ""
+    if audio:
+        audio_bytes = await audio.read()
+        res = transcribe_audio_file(audio_bytes)
+        transcript = res["text"]
+    elif transcribed_text:
+        transcript = transcribed_text
+    else:
+        raise HTTPException(status_code=400, detail="Either audio or transcribed_text must be provided")
+
+    if not GROQ_API_KEY:
+        raise HTTPException(
+            status_code=500, 
+            detail="GROQ_API_KEY environment variable is missing on the server. Please set it to enable LLM intent parsing."
+        )
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    system_prompt = f"""You are a Natural Language Understanding component for a video game.
+Your task is to analyze the user's transcribed speech and map it to one of the allowed intents, and extract any relevant variables as slots.
+
+Allowed Intents: {allowed_intents}
+Context: {context_prompt}
+
+You must respond with ONLY a valid JSON object in the following format:
+{{
+    "intent": "NameOfIntent",
+    "slots": {{
+        "slot_name": "slot_value"
+    }}
+}}
+If no intent matches well, output "Unknown" for the intent. Do not include any other text or markdown formatting.
+"""
+
+    data = {
+        "model": "llama3-8b-8192",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": transcript}
+        ],
+        "temperature": 0.0,
+        "response_format": {"type": "json_object"}
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        result = response.json()
+        content = result["choices"][0]["message"]["content"]
+        parsed_json = json.loads(content)
+        
+        return {
+            "transcript": transcript,
+            "intent": parsed_json.get("intent", "Unknown"),
+            "slots_json": json.dumps(parsed_json.get("slots", {}))
+        }
+    except Exception as e:
+        print(f"Error parsing intent: {e}")
+        return {
+            "transcript": transcript,
+            "intent": "Unknown",
+            "slots_json": "{}"
+        }
+
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
